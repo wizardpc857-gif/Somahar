@@ -1,29 +1,54 @@
-// src/components/Sidebar.js
-import { NavLink } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+.sidebar {
+  position: sticky;
+  top: 72px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 
-const links = [
-  { to: "/", icon: "🏠", label: "Home" },
-  { to: "/friends", icon: "👥", label: "Friends" },
-  { to: "/messages", icon: "💬", label: "Messages" },
-  { to: "/notifications", icon: "🔔", label: "Notifications" },
-  { to: "/news", icon: "📰", label: "News" },
-  { to: "/memes", icon: "😂", label: "Memes" },
-  { to: "/groups", icon: "👥", label: "Groups" },
-];
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #050505;
+  font-size: 15px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
 
-export default function Sidebar() {
-  const { currentUser } = useAuth();
-  return (
-    <aside className="sidebar">
-      <NavLink to={`/profile/${currentUser?.uid}`} className={({ isActive }) => "sidebar-link" + (isActive ? " active" : "")}>
-        <span className="s-icon">👤</span> My Profile
-      </NavLink>
-      {links.map(l => (
-        <NavLink key={l.to} to={l.to} end={l.to === "/"} className={({ isActive }) => "sidebar-link" + (isActive ? " active" : "")}>
-          <span className="s-icon">{l.icon}</span> {l.label}
-        </NavLink>
-      ))}
-    </aside>
-  );
+.sidebar-item:hover {
+  background: #f0f2f5;
+}
+
+.sidebar-item.active {
+  background: #e7f3ff;
+  color: #1877f2;
+}
+
+.sidebar-icon {
+  width: 36px;
+  height: 36px;
+  background: #e4e6eb;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.sidebar-item.active .sidebar-icon {
+  background: #cce0ff;
+}
+
+.sidebar-label {
+  flex: 1;
+}
+
+@media (max-width: 1100px) {
+  .sidebar-label { display: none; }
+  .sidebar-item { justify-content: center; }
 }
