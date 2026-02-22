@@ -1,142 +1,206 @@
-// src/components/PostCard.js
-import { useState, useEffect } from "react";
-import { db } from "../firebase/config";
-import { useAuth } from "../context/AuthContext";
-import { Link } from "react-router-dom";
-import {
-  doc, updateDoc, setDoc, deleteDoc, getDoc,
-  collection, onSnapshot, addDoc, serverTimestamp, increment
-} from "firebase/firestore";
-import { formatDistanceToNow } from "date-fns";
-import toast from "react-hot-toast";
+.post-card {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  margin-bottom: 12px;
+  overflow: visible;
+}
 
-export default function PostCard({ post }) {
-  const { currentUser } = useAuth();
-  const [reactions, setReactions] = useState({});
-  const [myReaction, setMyReaction] = useState(null);
-  const [comments, setComments] = useState([]);
-  const [showComments, setShowComments] = useState(false);
-  const [commentText, setCommentText] = useState("");
-  const [saved, setSaved] = useState(false);
+.post-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px 0;
+}
 
-  // Load reactions real-time
-  useEffect(() => {
-    const unsub = onSnapshot(
-      collection(db, "posts", post.id, "reactions"),
-      snap => {
-        const r = {};
-        snap.forEach(d => { r[d.id] = d.data(); });
-        setReactions(r);
-        setMyReaction(r[currentUser.uid]?.type || null);
-      }
-    );
-    return unsub;
-  }, [post.id, currentUser.uid]);
+.post-avatar {
+  width: 40px;
+  height: 40px;
+  background: #1877f2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
 
-  // Load comments real-time
-  useEffect(() => {
-    if (!showComments) return;
-    const unsub = onSnapshot(
-      collection(db, "posts", post.id, "comments"),
-      snap => setComments(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-    );
-    return unsub;
-  }, [post.id, showComments]);
+.post-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
 
-  async function react(type) {
-    const ref = doc(db, "posts", post.id, "reactions", currentUser.uid);
-    if (myReaction === type) {
-      await deleteDoc(ref);
-    } else {
-      await setDoc(ref, { type, userId: currentUser.uid });
-    }
-  }
+.post-author {
+  font-weight: 600;
+  font-size: 15px;
+  color: #050505;
+  text-decoration: none;
+}
 
-  async function addComment() {
-    if (!commentText.trim()) return;
-    await addDoc(collection(db, "posts", post.id, "comments"), {
-      text: commentText,
-      authorId: currentUser.uid,
-      authorName: currentUser.displayName,
-      createdAt: serverTimestamp()
-    });
-    await updateDoc(doc(db, "posts", post.id), { commentCount: increment(1) });
-    setCommentText("");
-  }
+.post-author:hover {
+  text-decoration: underline;
+}
 
-  async function toggleSave() {
-    const ref = doc(db, "users", currentUser.uid, "saved", post.id);
-    if (saved) { await deleteDoc(ref); setSaved(false); }
-    else { await setDoc(ref, { postId: post.id, savedAt: serverTimestamp() }); setSaved(true); }
-    toast.success(saved ? "Removed from saved" : "Post saved!");
-  }
+.post-time {
+  font-size: 13px;
+  color: #65676b;
+}
 
-  const blazeCount = Object.values(reactions).filter(r => r.type === "blaze").length;
-  const freezeCount = Object.values(reactions).filter(r => r.type === "freeze").length;
-  const timeAgo = post.createdAt?.toDate ? formatDistanceToNow(post.createdAt.toDate(), { addSuffix: true }) : "just now";
+.post-more {
+  background: none;
+  border: none;
+  color: #65676b;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
 
-  return (
-    <div className="card">
-      <div className="post-header">
-        <Link to={`/profile/${post.authorId}`}>
-          <div className="post-avatar">{post.authorName?.[0] || "U"}</div>
-        </Link>
-        <div>
-          <Link to={`/profile/${post.authorId}`}>
-            <div className="post-name">{post.authorName}</div>
-          </Link>
-          <div className="post-time">{timeAgo}</div>
-        </div>
-      </div>
+.post-more:hover {
+  background: #f0f2f5;
+}
 
-      {post.text && <div className="post-body">{post.text}</div>}
-      {post.imageUrl && <img className="post-image" src={post.imageUrl} alt="post" />}
+.post-content {
+  padding: 12px 16px;
+  font-size: 15px;
+  color: #050505;
+  line-height: 1.5;
+}
 
-      <div className="post-stats">
-        <span>🔥 {blazeCount} · ❄️ {freezeCount}</span>
-        <span onClick={() => setShowComments(!showComments)} style={{ cursor: "pointer" }}>
-          💬 {post.commentCount || 0} comments
-        </span>
-      </div>
+.post-counts {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+}
 
-      <div className="post-actions">
-        <button className={`post-action-btn ${myReaction === "blaze" ? "blazed" : ""}`} onClick={() => react("blaze")}>
-          🔥 Blaze
-        </button>
-        <button className={`post-action-btn ${myReaction === "freeze" ? "frozen" : ""}`} onClick={() => react("freeze")}>
-          ❄️ Freeze
-        </button>
-        <button className="post-action-btn" onClick={() => setShowComments(!showComments)}>
-          💬 Comment
-        </button>
-        <button className={`post-action-btn ${saved ? "saved" : ""}`} onClick={toggleSave}>
-          🔖 Save
-        </button>
-        <button className="post-action-btn" onClick={() => { navigator.clipboard.writeText(window.location.origin + "/post/" + post.id); toast.success("Link copied!"); }}>
-          ↗️ Share
-        </button>
-      </div>
+.reaction-counts {
+  display: flex;
+  gap: 4px;
+  font-size: 14px;
+  color: #65676b;
+}
 
-      {showComments && (
-        <div style={{ borderTop: "1px solid var(--border)" }}>
-          {comments.map(c => (
-            <div key={c.id} className="comment-item">
-              <div className="avatar" style={{ width: 32, height: 32, fontSize: 14 }}>{c.authorName?.[0]}</div>
-              <div className="comment-bubble">
-                <div className="comment-author">{c.authorName}</div>
-                <div className="comment-text">{c.text}</div>
-              </div>
-            </div>
-          ))}
-          <div style={{ display: "flex", gap: 8, padding: "8px 16px" }}>
-            <input className="inp" placeholder="Write a comment..." value={commentText}
-              onChange={e => setCommentText(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && addComment()}
-              style={{ flex: 1 }} />
-            <button className="btn btn-primary btn-sm" onClick={addComment}>Post</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+.comment-count {
+  font-size: 14px;
+  color: #65676b;
+  cursor: pointer;
+}
+
+.comment-count:hover {
+  text-decoration: underline;
+}
+
+.post-divider {
+  height: 1px;
+  background: #e4e6eb;
+  margin: 0 16px;
+}
+
+.post-actions {
+  display: flex;
+  padding: 4px 8px;
+}
+
+.post-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #65676b;
+  cursor: pointer;
+  transition: background 0.2s;
+  position: relative;
+}
+
+.post-action-btn:hover {
+  background: #f0f2f5;
+}
+
+.post-action-btn .reacted {
+  color: #1877f2;
+}
+
+.reaction-btn {
+  position: relative;
+}
+
+.reaction-picker {
+  position: absolute;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: 50px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  padding: 8px 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.reaction-picker span {
+  font-size: 24px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.reaction-picker span:hover {
+  transform: scale(1.3);
+}
+
+.comments-section {
+  padding: 8px 16px 12px;
+}
+
+.comment-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.comment-avatar {
+  width: 32px;
+  height: 32px;
+  background: #1877f2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.comment-input-wrap {
+  flex: 1;
+}
+
+.comment-input {
+  width: 100%;
+  background: #f0f2f5;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 14px;
+  outline: none;
+  font-family: inherit;
+}
+
+.comment-input:focus {
+  background: #e4e6eb;
 }
